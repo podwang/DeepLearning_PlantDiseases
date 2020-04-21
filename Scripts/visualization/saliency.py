@@ -29,7 +29,7 @@ parser.add_argument('image_path',metavar='N', help='path to the image')
 parser.add_argument('image_class',metavar='N', help='disease name')
 parser.add_argument('--output_dir', metavar='DIR', help='path to output dir', default="output/")
 parser.add_argument('--classes', default=10, type=int, metavar='N', help='number of classes')
-parser.add_argument('--arch',metavar='N',  default="vgg13", help='architecture name, default: vgg13')
+parser.add_argument('--arch',metavar='N',  default="alexnet", help='architecture name, default: alexnet')
 
 args = parser.parse_args()
 
@@ -53,7 +53,8 @@ def load_defined_model(path, num_classes,name):
     pretrained_state = torch.load(path)
     new_pretrained_state= OrderedDict()
    
-    for k, v in pretrained_state['state_dict'].items():
+    #for k, v in pretrained_state['state_dict'].items():
+    for k, v in pretrained_state.items():
         layer_name = k.replace("module.", "")
         new_pretrained_state[layer_name] = v
         
@@ -62,6 +63,10 @@ def load_defined_model(path, num_classes,name):
     if(len(diff)!=0):
         print("Mismatch in these layers :", name, ":", [d[0] for d in diff])
    
+    for name, value in diff:
+        new_pretrained_state[name] = value
+    
+    diff = [s for s in diff_states(model.state_dict(), new_pretrained_state)]
     assert len(diff) == 0
     
     #Merge
@@ -70,6 +75,11 @@ def load_defined_model(path, num_classes,name):
 
 
 #Load the model
+
+# pretrained_state = torch.load(args.model_path)
+# print(type(pretrained_state))
+# print(pretrained_state)
+
 model= load_defined_model(args.model_path,args.classes,args.arch)
 use_gpu = torch.cuda.is_available()
 
@@ -121,7 +131,7 @@ vis_param_dict, reset_state, remove_handles = util.augment_module(model)
 
 
 
-def Saliency_map(image,model,preprocess,ground_truth,use_gpu=False,method=util.GradType.GUIDED):
+def Saliency_map(image,model,preprocess,ground_truth,use_gpu=True,method=util.GradType.GUIDED):
     vis_param_dict['method'] = method
     img_tensor = preprocess(image)
     img_tensor.unsqueeze_(0)
@@ -177,7 +187,8 @@ use_gpu = torch.cuda.is_available()
 
 if use_gpu:
     print("Transfering models to GPU(s)")
-    model= torch.nn.DataParallel(model).cuda()
+    #model= torch.nn.DataParallel(model).cuda()
+    model = model.cuda()
     
 
 tic = time.time()

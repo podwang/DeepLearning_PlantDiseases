@@ -13,10 +13,13 @@ eval_examples = 256
 for s in stats_full:
     train_mode = None
     if s['retrained'] == 'True':
+        print('debug 1')
         if s['shallow_retrain']  == 'True':
             train_mode = 'shallow'
+            print('debug 2')
         else: 
             train_mode = 'deep'
+            print('debug 3')
     else:
         train_mode = 'from_scratch'
     s['train_mode'] = train_mode
@@ -25,15 +28,18 @@ for s in stats_full:
 
 
 #Color
-N = 6
+N = 2
 cmx = cm.rainbow(np.random.rand(3))
+#cmx = cm.rainbow(np.random.rand(1))
 c_map = {'shallow' : cmx[0], 'deep' : cmx[1], 'from_scratch': cmx[2]}
+#c_map = {'shallow' : cmx[0]}
 cmx = cm.rainbow(range(0, N *50, 50))
 
 
-lt.figure(figsize=(10, 6))
+plt.figure(figsize=(12, 7))
 
 marker = {'shallow' : 'o', 'deep' : 'h', 'from_scratch' : 's'}
+#marker = {'shallow' : 'o'}
 props = dict(boxstyle='round', facecolor='w', alpha=0.7)
 
 for t in c_map.keys():
@@ -52,34 +58,32 @@ for t in c_map.keys():
     #Y
     accuracy = [float(s['accuracy']) for s in stats]
 
-    plt.scatter(training_time, accuracy, s=fps, c=colors,\
-                label=t, edgecolor='black', marker=marker[t])
-
+    plt.scatter(training_time, accuracy, s=fps, c=colors, label=t, edgecolor='black', marker=marker[t])
+    #plt.scatter(training_time, accuracy)
     for i in range(len(stats)):
         print(str(training_time[i]) + ' ' + str(accuracy[i]) + ' ' + names[i] + ' ' + t)
         
 
 
-plt.xlabel('Training time (s)', fontsize=16)
-plt.ylabel('Accuracy', fontsize=16)
+    plt.xlabel('Training time (s)', fontsize=16)
+    plt.ylabel('Accuracy', fontsize=16)
+    
+    plt.legend(loc='lower right', fontsize=12, )
+    
+    min_fps = int(np.floor(min((s['fps'] for s in stats))))
+    max_fps = int(np.floor(max((s['fps'] for s in stats))))
+    #plt.text(1, 1, 'size = fps(%d-%d)' % (max_fps, min_fps), fontsize=14, va='bottom', ha='center')
 
-plt.legend(loc='lower right', fontsize=12, )
-
-min_fps = min((s['fps'] for s in stats))
-max_fps = max((s['fps'] for s in stats))
-plt.text(400, 0.55, 'size = fps(%d-%d)' % (max_fps, min_fps), fontsize=14,
-        va='bottom', ha='center')
-
-ax = plt.subplot(111)
-x = training_time[0]
-y = accuracy [0]
-ax.plot(x, y, label='alexnet', color=colors[0])
-ax.plot(x, y, label='densenet169',color=colors[1])
-ax.plot(x, y, label='inception_v3',color=colors[2])
-ax.plot(x, y, label='resnet34',color=colors[3])
-ax.plot(x, y, label='squeezenet1_1',color=colors[4])
-ax.plot(x, y, label='vgg13',color=colors[5])
-ax.legend()
+    #ax = plt.subplot(111)
+    x = training_time[0]
+    y = accuracy [0]
+    plt.plot(x, y, label='alexnet', color=colors[0])
+# ax.plot(x, y, label='densenet169',color=colors[1])
+# ax.plot(x, y, label='inception_v3',color=colors[2])
+# ax.plot(x, y, label='resnet34',color=colors[3])
+    plt.plot(x, y, label='squeezenet1_1',color=colors[1])
+# ax.plot(x, y, label='vgg13',color=colors[5])
+    plt.legend()
 
 plt.title('Transfer learning for Plant Disease classification',y=1.05, fontsize=16)
 plt.savefig('results.png')
