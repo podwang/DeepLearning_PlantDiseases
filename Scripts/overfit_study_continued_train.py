@@ -27,9 +27,11 @@ from functools import reduce
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
+last_epoch = 40
 cols = ['shallow_train','shallow_test','scratch_train','scratch_test','deep_train','deep_test']
 num_epochs_global = 40
-alxnt_accuracy_stats = pd.DataFrame(index=range(num_epochs_global), columns = cols)
+alxnt_accuracy_stats = pd.DataFrame(index=range(last_epoch, last_epoch+num_epochs_global), columns = cols)
 print(alxnt_accuracy_stats)
 
 intermediate_model_base_path  = 'ovft_intermediate_models'
@@ -150,7 +152,7 @@ def load_data(resize):
     return dset_loaders['train'], dset_loaders['val']
 
 def train(net, trainloader, param_list, testloader,train_method):
-    epochs = num_epochs_global
+    epochs = last_epoch + num_epochs_global
     def in_param_list(s):
         for p in param_list:
             if s.endswith(p):
@@ -172,7 +174,7 @@ def train(net, trainloader, param_list, testloader,train_method):
     optimizer = optim.SGD((p[1] for p in params), lr=0.001, momentum=0.9)
 
     losses = []
-    for epoch in range(epochs):
+    for epoch in range(last_epoch, epochs):
         begin = time.time()
         net = net.train()
         running_loss = 0.0
@@ -251,7 +253,6 @@ def train(net, trainloader, param_list, testloader,train_method):
         plt.title('Overfitting Ablation Study - whole view')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
-        plt.legend()
         plt.show()
 
 
@@ -269,7 +270,6 @@ def train(net, trainloader, param_list, testloader,train_method):
         plt.title('Overfitting Ablation Study')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
-        plt.legend()
         plt.ylim([0.85,1.00])
         plt.show()
         
@@ -337,6 +337,13 @@ def train_eval(net, trainloader, testloader, param_list, train_method):
     return {**stats_train, **stats_eval} # https://treyhunner.com/2018/10/asterisks-in-python-what-they-are-and-how-to-use-them/
 
 
+def load_saved_intermediate_model(path, name = 'alexnet', classes = 39):
+    model = models.__dict__['alexnet'](num_classes = classes)
+    StateDict = torch.load(path)
+    model.load_state_dict(StateDict)
+    model = model.cuda()
+    model.train()
+    return model
 
 
 
@@ -369,8 +376,11 @@ for name in models_to_test:
     print("")    
     print("Targeting %s with %d classes" % (name, num_classes))
     print("------------------------------------------")
-    model_blank = models.__dict__[name](num_classes=num_classes)
-
+    #model_blank = models.__dict__[name](num_classes=num_classes)
+    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_scratch.pt'
+    print_green('loading ' + path + ' to continue training...')
+    model_blank = load_saved_intermediate_model(path)
+    
     resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
     print("Resizing input images to max of", resize)
     trainloader, testloader = load_data(resize)
@@ -418,7 +428,10 @@ for name in models_to_test:
     print("")
     print("Targeting %s with %d classes" % (name, num_classes))
     print("------------------------------------------")
-    model_pretrained, diff = load_defined_model(name, num_classes)
+    _, diff = load_defined_model(name, num_classes)
+    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_shallow.pt'
+    print_green('loading ' + path + ' to continue training...')
+    model_pretrained = load_saved_intermediate_model(path)
     final_params = [d[0] for d in diff]
     #final_params = None
     
@@ -465,7 +478,10 @@ for name in models_to_test:
     print("")
     print("Targeting %s with %d classes" % (name, num_classes))
     print("------------------------------------------")
-    model_pretrained, diff = load_defined_model(name, num_classes)
+    #model_pretrained, diff = load_defined_model(name, num_classes)
+    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_deep.pt'
+    print_green('loading ' + path + ' to continue training...')
+    model_pretrained = load_saved_intermediate_model(path)
     
     resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
     print("Resizing input images to max of", resize)
@@ -493,7 +509,7 @@ for name in models_to_test:
 
 #Export stats as .csv
 import csv
-with open('ovft_study_stats.csv', 'w') as csvfile:
+with open('ovft_study_stats_continued.csv', 'w') as csvfile:
     fieldnames = stats[0].keys()
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -501,4 +517,4 @@ with open('ovft_study_stats.csv', 'w') as csvfile:
     for s in stats:
         writer.writerow(s)
 
-alxnt_accuracy_stats.to_excel('ovft_study.xlsx')
+alxnt_accuracy_stats.to_excel('ovft_study_continued.xlsx')

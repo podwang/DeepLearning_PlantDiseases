@@ -33,7 +33,8 @@ for idx, col_idx in enumerate(df_ovft_study_rst.columns):
                  df_ovft_study_rst[col_idx],
                  '-'+ markers[idx],
                  linewidth = 0.8,
-                 markersize = 6)
+                 markersize = 6,
+                 label = col_idx)
 
 # for marker shapes, see https://matplotlib.org/3.2.1/api/markers_api.html#module-matplotlib.markers
 

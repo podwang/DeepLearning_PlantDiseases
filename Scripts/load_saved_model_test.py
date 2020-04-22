@@ -1,35 +1,97 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 20 16:11:29 2020
+Created on Tue Apr 21 21:30:02 2020
 
 @author: administrator
 """
 
-import time
-import os
 
-import numpy as np
 import torch
-import torch.optim as optim
-from torch import nn
-from torch.autograd import Variable
-
+import torchvision.models as models
 import torchvision
 import torchvision.models as models
 import torch.utils.model_zoo as model_zoo
 import torchvision.transforms as transforms
 from torchvision import datasets
 
-from itertools import accumulate
-from functools import reduce
-
-import pandas as pd
 import matplotlib.pyplot as plt
+import io
+import time
+import argparse
+import requests
+import torch
+from torchvision import models
+import torchvision.transforms as transforms
+import numpy as np
+from PIL import Image
+import glob
+import matplotlib.pyplot as plt
+from torch.autograd import Variable
+import torch.nn as nn
+import torch.nn.functional as F
+import seaborn as sns
+import copy                            
+import math
+from collections import OrderedDict
+import os
+from os import listdir
+from os.path import isfile, join
+from torchvision import datasets
+import pandas as pd
 
+
+
+# def diff_states(dict_canonical, dict_subset):
+#     names1, names2 = (list(dict_canonical.keys()), list(dict_subset.keys()))
+    
+#     not_in_1 = [n for n in names1 if n not in names2]
+#     not_in_2 = [n for n in names2 if n not in names1]
+    
+#     assert len(not_in_1) == 0
+#     assert len(not_in_2) == 0
+    
+#     for name, v1 in dict_canonical.items():
+#         v2 = dict_subset[name]
+        
+#         assert hasattr(v2, 'size')
+#         if v1.size() != v2.size():
+#             print(name,v1,v1.size(),v2.size())
+#             yield (name, v1)   
+
+
+# def load_defined_model(path, num_classes,name):
+#     model = models.__dict__[name](num_classes=num_classes)
+#     pretrained_state = torch.load(path)
+#     new_pretrained_state= OrderedDict()
+   
+#     #for k, v in pretrained_state['state_dict'].items():
+#     for k, v in pretrained_state.items():
+#         layer_name = k.replace("module.", "")
+#         new_pretrained_state[layer_name] = v
+        
+#     #Diff
+#     diff = [s for s in diff_states(model.state_dict(), new_pretrained_state)]
+#     if(len(diff)!=0):
+#         print("Mismatch in these layers :", name, ":", [d[0] for d in diff])
+   
+#     for name, value in diff:
+#         new_pretrained_state[name] = value
+    
+#     diff = [s for s in diff_states(model.state_dict(), new_pretrained_state)]
+#     assert len(diff) == 0
+    
+#     #Merge
+#     model.load_state_dict(new_pretrained_state)
+#     return model
+
+
+
+
+last_epoch = 40
 cols = ['shallow_train','shallow_test','scratch_train','scratch_test','deep_train','deep_test']
 num_epochs_global = 40
-alxnt_accuracy_stats = pd.DataFrame(index=range(num_epochs_global), columns = cols)
+alxnt_accuracy_stats = pd.DataFrame(index=range(last_epoch-1, last_epoch+num_epochs_global), columns = cols)
 print(alxnt_accuracy_stats)
 
 intermediate_model_base_path  = 'ovft_intermediate_models'
@@ -150,7 +212,7 @@ def load_data(resize):
     return dset_loaders['train'], dset_loaders['val']
 
 def train(net, trainloader, param_list, testloader,train_method):
-    epochs = num_epochs_global
+    epochs = last_epoch + num_epochs_global
     def in_param_list(s):
         for p in param_list:
             if s.endswith(p):
@@ -172,7 +234,7 @@ def train(net, trainloader, param_list, testloader,train_method):
     optimizer = optim.SGD((p[1] for p in params), lr=0.001, momentum=0.9)
 
     losses = []
-    for epoch in range(epochs):
+    for epoch in range(last_epoch, epochs):
         begin = time.time()
         net = net.train()
         running_loss = 0.0
@@ -338,167 +400,47 @@ def train_eval(net, trainloader, testloader, param_list, train_method):
 
 
 
-
-
-############################################################
-stats = []
-num_classes = 39
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-print("---------------------")
-print("TRAINING from scratch")
-for name in models_to_test:
-    print("")    
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    model_blank = models.__dict__[name](num_classes=num_classes)
-
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
+def load_saved_intermediate_model(path, name = 'alexnet', classes = 39):
+    model = models.__dict__['alexnet'](num_classes = classes)
+    StateDict = torch.load(path)
+    model.load_state_dict(StateDict)
+    model = model.cuda()
+    model.train()
     
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_blank = torch.nn.DataParallel(model_blank).cuda()    
-        model_blank = model_blank.cuda()
-        
-    mdl_path = name + '_scratch.pt'
-    #torch.save(model_blank.state_dict(), mdl_path)    
+    return model
     
-    final_params = None
-    blank_stats = train_eval(model_blank, trainloader, testloader, final_params, 'scratch')
-    blank_stats['name'] = name
-    blank_stats['retrained'] = False
-    blank_stats['shallow_retrain'] = False
-    stats.append(blank_stats)
     
-    print("")
 
-t = 0.0
-for s in stats:
-    t += s['eval_time'] + s['training_time']
-print("Total time for training and evaluation", t)
-print("FINISHED")
+model_raw = models.__dict__['alexnet'](num_classes=39)
 
+# model = models.__dict__['alexnet'](num_classes=39)
+path = 'ovft_intermediate_models/epoch39_scratch.pt'
+# StateDict = torch.load(path)
+# model.load_state_dict(StateDict)
 
+model = load_saved_intermediate_model(path)
 
+#resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
+resize = (224,224)
+print("Resizing input images to max of", resize)
+trainloader, testloader = load_data(resize)
 
+#model = model.cuda()
+# model = model.cuda()
+# model = model.cuda()
+# model = model.cuda()
+# model = model.cuda()
+# model.eval()
+# epoch_end_testset_val = evaluate_stats(model, testloader)
 
+# model_raw = model_raw.cuda()
+# model_raw.eval()
+# epoch_end_testset_val = evaluate_stats(model_raw, testloader)
 
-
-
-
-
-
-
-
-
-
-print("RETRAINING")
-
-for name in models_to_test:
-    print("")
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    model_pretrained, diff = load_defined_model(name, num_classes)
-    final_params = [d[0] for d in diff]
-    #final_params = None
-    
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
-    
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
-        model_pretrained = model_pretrained.cuda()
-        
-    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'shallow')
-    
-    mdl_path = name + '_shallow.pt'
-    #torch.save(model_pretrained.state_dict(), mdl_path)
-    
-    pretrained_stats['name'] = name
-    pretrained_stats['retrained'] = True
-    pretrained_stats['shallow_retrain'] = True
-    stats.append(pretrained_stats)
-    
-    print("")
+pretrained_state = model_zoo.load_url(model_urls['alexnet'])
+model_raw.load_state_dict(pretrained_state)
+model_raw.cuda()
+model_raw.eval()
+epoch_end_testset_val = evaluate_stats(model_raw, testloader)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-print("RETRAINING deep")
-
-for name in models_to_test:
-    print("")
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    model_pretrained, diff = load_defined_model(name, num_classes)
-    
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
-    
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
-        model_pretrained = model_pretrained.cuda()
-        
-    mdl_path = name + '_deep.pt'
-    #torch.save(model_pretrained.state_dict(), mdl_path)
-    
-    final_params = None
-    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'deep')
-    pretrained_stats['name'] = name
-    pretrained_stats['retrained'] = True
-    pretrained_stats['shallow_retrain'] = False
-    stats.append(pretrained_stats)
-    
-    print("")
-
-
-
-
-#Export stats as .csv
-import csv
-with open('ovft_study_stats.csv', 'w') as csvfile:
-    fieldnames = stats[0].keys()
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    writer.writeheader()
-    for s in stats:
-        writer.writerow(s)
-
-alxnt_accuracy_stats.to_excel('ovft_study.xlsx')
