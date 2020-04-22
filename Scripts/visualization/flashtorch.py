@@ -33,7 +33,9 @@ import os
 from os import listdir
 from os.path import isfile, join
 from torchvision import datasets
-model = models.alexnet(pretrained = True)
+
+
+#model = models.alexnet(pretrained = True)
 
 #model2 = torch.load()
 

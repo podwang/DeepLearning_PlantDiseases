@@ -27,8 +27,9 @@ from functools import reduce
 import pandas as pd
 
 cols = ['shallow_train','shallow_test','scratch_train','scratch_test','deep_train','deep_test']
-num_epochs_global = 20
+num_epochs_global = 40
 alxnt_accuracy_stats = pd.DataFrame(index=range(num_epochs_global), columns = cols)
+print(alxnt_accuracy_stats)
 
 intermediate_model_base_path  = 'ovft_intermediate_models'
 if not os.path.exists(intermediate_model_base_path):
@@ -140,7 +141,7 @@ def load_data(resize):
     dsets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
              for x in ['train', 'val']}
     dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=batch_size,
-                                                   shuffle=True)
+                                                   shuffle=True, num_workers = 12)
                     for x in ['train', 'val']}
     dset_sizes = {x: len(dsets[x]) for x in ['train', 'val']}
     dset_classes = dsets['train'].classes
@@ -303,36 +304,25 @@ def train_eval(net, trainloader, testloader, param_list, train_method):
 ############################################################
 stats = []
 num_classes = 39
-print("RETRAINING")
 
-for name in models_to_test:
-    print("")
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    model_pretrained, diff = load_defined_model(name, num_classes)
-    final_params = [d[0] for d in diff]
-    #final_params = None
-    
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
-    
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
-        model_pretrained = model_pretrained.cuda()
-        
-    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'shallow')
-    
-    mdl_path = name + '_shallow.pt'
-    #torch.save(model_pretrained.state_dict(), mdl_path)
-    
-    pretrained_stats['name'] = name
-    pretrained_stats['retrained'] = True
-    pretrained_stats['shallow_retrain'] = True
-    stats.append(pretrained_stats)
-    
-    print("")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 print("---------------------")
 print("TRAINING from scratch")
@@ -369,6 +359,67 @@ for s in stats:
 print("Total time for training and evaluation", t)
 print("FINISHED")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+print("RETRAINING")
+
+for name in models_to_test:
+    print("")
+    print("Targeting %s with %d classes" % (name, num_classes))
+    print("------------------------------------------")
+    model_pretrained, diff = load_defined_model(name, num_classes)
+    final_params = [d[0] for d in diff]
+    #final_params = None
+    
+    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
+    print("Resizing input images to max of", resize)
+    trainloader, testloader = load_data(resize)
+    
+    if use_gpu:
+        print("Transfering models to GPU(s)")
+        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
+        model_pretrained = model_pretrained.cuda()
+        
+    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'shallow')
+    
+    mdl_path = name + '_shallow.pt'
+    #torch.save(model_pretrained.state_dict(), mdl_path)
+    
+    pretrained_stats['name'] = name
+    pretrained_stats['retrained'] = True
+    pretrained_stats['shallow_retrain'] = True
+    stats.append(pretrained_stats)
+    
+    print("")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 print("RETRAINING deep")
 
 for name in models_to_test:
@@ -403,7 +454,7 @@ for name in models_to_test:
 
 #Export stats as .csv
 import csv
-with open('stats.csv', 'w') as csvfile:
+with open('ovft_study_stats.csv', 'w') as csvfile:
     fieldnames = stats[0].keys()
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
