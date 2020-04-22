@@ -42,6 +42,5 @@ plt.xlabel('Epochs')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.ylim([0.85,1.00])
-plt.figure(dpi = 2000)
 plt.show()
 
