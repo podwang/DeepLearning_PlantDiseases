@@ -416,6 +416,38 @@ print("FINISHED")
 
 
 
+print("RETRAINING deep")
+
+for name in models_to_test:
+    print("")
+    print("Targeting %s with %d classes" % (name, num_classes))
+    print("------------------------------------------")
+    #model_pretrained, diff = load_defined_model(name, num_classes)
+    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_deep.pt'
+    print_green('loading ' + path + ' to continue training...')
+    model_pretrained = load_saved_intermediate_model(path)
+    
+    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
+    print("Resizing input images to max of", resize)
+    trainloader, testloader = load_data(resize)
+    
+    if use_gpu:
+        print("Transfering models to GPU(s)")
+        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
+        model_pretrained = model_pretrained.cuda()
+        
+    mdl_path = name + '_deep.pt'
+    #torch.save(model_pretrained.state_dict(), mdl_path)
+    
+    final_params = None
+    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'deep')
+    pretrained_stats['name'] = name
+    pretrained_stats['retrained'] = True
+    pretrained_stats['shallow_retrain'] = False
+    stats.append(pretrained_stats)
+    
+    print("")
+
 
 
 
@@ -468,41 +500,6 @@ for name in models_to_test:
 
 
 
-
-
-
-
-print("RETRAINING deep")
-
-for name in models_to_test:
-    print("")
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    #model_pretrained, diff = load_defined_model(name, num_classes)
-    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_deep.pt'
-    print_green('loading ' + path + ' to continue training...')
-    model_pretrained = load_saved_intermediate_model(path)
-    
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
-    
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_pretrained = torch.nn.DataParallel(model_pretrained).cuda()
-        model_pretrained = model_pretrained.cuda()
-        
-    mdl_path = name + '_deep.pt'
-    #torch.save(model_pretrained.state_dict(), mdl_path)
-    
-    final_params = None
-    pretrained_stats = train_eval(model_pretrained, trainloader, testloader, final_params, 'deep')
-    pretrained_stats['name'] = name
-    pretrained_stats['retrained'] = True
-    pretrained_stats['shallow_retrain'] = False
-    stats.append(pretrained_stats)
-    
-    print("")
 
 
 
