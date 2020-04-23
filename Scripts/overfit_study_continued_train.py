@@ -253,6 +253,7 @@ def train(net, trainloader, param_list, testloader,train_method):
         plt.title('Overfitting Ablation Study - whole view')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
+        plt.legend()
         plt.show()
 
 
@@ -271,6 +272,7 @@ def train(net, trainloader, param_list, testloader,train_method):
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.ylim([0.85,1.00])
+        plt.legend()
         plt.show()
         
         net = net.train()
@@ -370,43 +372,44 @@ num_classes = 39
 
 
 
-print("---------------------")
-print("TRAINING from scratch")
-for name in models_to_test:
-    print("")    
-    print("Targeting %s with %d classes" % (name, num_classes))
-    print("------------------------------------------")
-    #model_blank = models.__dict__[name](num_classes=num_classes)
-    path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_scratch.pt'
-    print_green('loading ' + path + ' to continue training...')
-    model_blank = load_saved_intermediate_model(path)
+# print("---------------------")
+# print("TRAINING from scratch")
+# for name in models_to_test:
+#     print("")    
+#     print("Targeting %s with %d classes" % (name, num_classes))
+#     print("------------------------------------------")
+#     #model_blank = models.__dict__[name](num_classes=num_classes)
+#     path = intermediate_model_base_path + '/epoch' + str(last_epoch-1) + '_scratch.pt'
+#     print_green('loading ' + path + ' to continue training...')
+#     model_blank = load_saved_intermediate_model(path)
     
-    resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
-    print("Resizing input images to max of", resize)
-    trainloader, testloader = load_data(resize)
+#     resize = [s[1] for s in input_sizes.items() if s[0] in name][0]
+#     print("Resizing input images to max of", resize)
+#     trainloader, testloader = load_data(resize)
     
-    if use_gpu:
-        print("Transfering models to GPU(s)")
-        #model_blank = torch.nn.DataParallel(model_blank).cuda()    
-        model_blank = model_blank.cuda()
+#     if use_gpu:
+#         print("Transfering models to GPU(s)")
+#         #model_blank = torch.nn.DataParallel(model_blank).cuda()    
+#         model_blank = model_blank.cuda()
         
-    mdl_path = name + '_scratch.pt'
-    #torch.save(model_blank.state_dict(), mdl_path)    
+#     mdl_path = name + '_scratch.pt'
+#     #torch.save(model_blank.state_dict(), mdl_path)    
     
-    final_params = None
-    blank_stats = train_eval(model_blank, trainloader, testloader, final_params, 'scratch')
-    blank_stats['name'] = name
-    blank_stats['retrained'] = False
-    blank_stats['shallow_retrain'] = False
-    stats.append(blank_stats)
+#     final_params = None
+#     blank_stats = train_eval(model_blank, trainloader, testloader, final_params, 'scratch')
+#     blank_stats['name'] = name
+#     blank_stats['retrained'] = False
+#     blank_stats['shallow_retrain'] = False
+#     stats.append(blank_stats)
     
-    print("")
+#     print("")
 
-t = 0.0
-for s in stats:
-    t += s['eval_time'] + s['training_time']
-print("Total time for training and evaluation", t)
-print("FINISHED")
+# t = 0.0
+# for s in stats:
+#     #t += s['eval_time'] + s['training_time']
+#     t += 0 + s['training_time']
+# print("Total time for training and evaluation", t)
+# print("FINISHED")
 
 
 

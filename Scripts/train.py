@@ -153,7 +153,7 @@ def load_data(resize):
     dsets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
              for x in ['train', 'val']}
     dset_loaders = {x: torch.utils.data.DataLoader(dsets[x], batch_size=batch_size,
-                                                   shuffle=True)
+                                                   shuffle=True, num_workers = 10)
                     for x in ['train', 'val']}
     dset_sizes = {x: len(dsets[x]) for x in ['train', 'val']}
     dset_classes = dsets['train'].classes
